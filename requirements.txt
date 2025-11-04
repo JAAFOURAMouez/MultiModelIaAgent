@@ -1,0 +1,16 @@
+# Interface graphique
+tkinter-py3>=3.9
+
+# Traitement d'images et vidéos
+Pillow>=10.0.0
+opencv-python>=4.8.0
+
+# Audio (optionnel, pour la prévisualisation)
+pygame>=2.5.0
+
+# Agent multimodal et IA
+agno>=0.1.0
+google-genai>=0.3.0
+
+# Utilitaires
+requests>=2.31.0
