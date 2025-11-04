@@ -45,7 +45,7 @@ Suivez ces étapes pour configurer et lancer l'application :
 1. **Cloner le Dépôt**
 
 ```bash
-git clone [https://github.com/votre_nom_utilisateur/votre_repo.git](https://github.com/votre_nom_utilisateur/votre_repo.git)
+git clone https://github.com/JAAFOURAMouez/MultiModelIaAgent.git
 cd votre_repo
 ```
 2. **Créer et Activer l'Environnement Virtuel**
