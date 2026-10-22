@@ -1,6 +1,14 @@
 import tkinter as tk
 from pathlib import Path
 import sys
+import os
+
+# Charger les clés API depuis le fichier .env (à la racine du projet)
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parent / ".env")
+except ImportError:
+    print("⚠️  python-dotenv absent : pip install python-dotenv (le .env sera ignoré)")
 
 # Imports des modules de l'application
 from MediaFile import MultimodalAgentModel
@@ -69,20 +77,19 @@ if __name__ == "__main__":
         import PIL
         import cv2
         import agno
-        import google.genai
+        import groq
     except ImportError as e:
         print(f"❌ Dépendance manquante: {e}")
         print("\n📦 Installez les dépendances requises:")
-        print("pip install pillow opencv-python agno google-genai")
+        print("pip install pillow opencv-python agno groq python-dotenv")
         sys.exit(1)
     
     # Vérifier la variable d'environnement pour l'API
-    import os
-    if not os.getenv('GOOGLE_API_KEY') and not os.getenv('GEMINI_API_KEY'):
-        print("⚠️  AVERTISSEMENT: Aucune clé API trouvée!")
-        print("Définissez GOOGLE_API_KEY ou GEMINI_API_KEY dans vos variables d'environnement")
-        print("Exemple: export GOOGLE_API_KEY='votre_cle_ici'")
-        print("\nL'application va démarrer mais la génération vidéo échouera sans clé API.\n")
-    
+    if not os.getenv('GROQ_API_KEY'):
+        print("⚠️  Clé Groq manquante (GROQ_API_KEY dans .env) : l'analyse IA échouera.")
+        print("   Clé gratuite : https://console.groq.com/keys\n")
+    if not os.getenv('HF_TOKEN'):
+        print("⚠️  HF_TOKEN manquant (.env) : quota GPU Hugging Face réduit (2 min/jour au lieu de 5).")
+        print("   Token gratuit : https://huggingface.co/settings/tokens\n")
     # Lancer l'application
     main()

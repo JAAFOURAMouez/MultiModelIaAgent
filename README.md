@@ -1,18 +1,22 @@
-# 🎬 Créateur Vidéo Multimodal IA (Veo 3.0 & Gemini)
+# 🎬 Créateur Vidéo Multimodal IA (Hugging Face LTX-Video & Groq gpt-oss)
 
 ## Introduction
 
-Ce projet est une application de bureau interactive (GUI) développée avec **Tkinter** en Python, permettant aux utilisateurs d'exploiter la puissance des modèles multimodaux de Google, notamment **Gemini** pour l'analyse de contenu et **Veo 3.0** pour la génération de vidéos.
+Ce projet est une application de bureau interactive (GUI) développée avec **Tkinter** en Python, permettant aux utilisateurs d'exploiter l'IA générative : **gpt-oss d'OpenAI via Groq** pour écrire le script/prompt et **LTX-Video (via un Space Hugging Face)** pour la génération de vidéos.
 
 L'application facilite la création de clips vidéo personnalisés en combinant divers médias d'entrée (images, audio, vidéos) avec un prompt textuel enrichi par l'IA, le tout dans un style visuel et une durée définis.
 
 ## 🌟 Fonctionnalités Principales
 
 * **Chargement Multimodal :** Supporte l'importation de fichiers **Image**, **Audio** et **Vidéo**.
-* **Analyse IA Intelligente :** Utilise un agent **Gemini (gemini-2.0-flash-exp)** pour analyser les médias chargés et générer un script/prompt détaillé basé sur le contenu.
+* **Analyse IA Intelligente :** Utilise un agent **Groq (`openai/gpt-oss-120b`, repli sur `gpt-oss-20b`)** pour générer un script/prompt détaillé. Ces modèles sont texte uniquement : l'agent reçoit les métadonnées des médias (nom, taille, résolution, durée), pas leur contenu visuel ou sonore. Décrivez le contenu dans votre prompt.
 * **Génération de Prompt :** Outil pour pré-générer un prompt initial incluant le style et la durée souhaités.
-* **Paramètres Vidéo :** Contrôle de la **durée** (4-8 secondes) et sélection du **style visuel** (ex. *Années 1980*, *Anime*, *Ciné Réaliste*).
-* **Génération Veo 3.0 :** Utilise le modèle `veo-3.0-generate-001` pour créer la vidéo à partir du prompt final, gérant le polling asynchrone et le téléchargement du fichier MP4 généré.
+* **Paramètres Vidéo :** Contrôle de la **durée** (4-24 secondes) et sélection du **style visuel** (ex. *Années 1980*, *Anime*, *Ciné Réaliste*).
+* **Génération LTX-Video :** Appelle le Space gratuit `Lightricks/ltx-video-distilled` avec `gradio_client` (texte→vidéo, ou image→vidéo si une image est chargée), jusqu'à 8 s, puis enregistre le MP4. Le quota ZeroGPU d'un compte gratuit est de 5 min de GPU par jour.
+* **Vidéos longues (> 8 s) :** la vidéo est générée en segments de 8 s maximum, chaque segment repartant de la dernière image du précédent (image→vidéo), puis assemblés avec ffmpeg. Chaque segment consomme ≈ 1 min de quota GPU ZeroGPU. Limite réglable avec `HF_MAX_TOTAL` (24 s par défaut).
+* **Remplissage automatique du prompt :** le bouton « Générer le Prompt » analyse l'image et/ou la vidéo chargées (modèle de vision `qwen/qwen3.8-27b` sur Groq, 3 images max) et transcrit l'audio (Whisper sur Groq, y compris la piste audio d'une vidéo), puis `gpt-oss` rédige *Idée de la scène / Caméra / Sons*. Sans média, un gabarit à compléter est inséré.
+* **Son dans la vidéo finale :** si un fichier audio est chargé, il est ajouté à la vidéo (ffmpeg, coupé ou complété à la durée de la vidéo). Sinon le son est généré par IA avec le Space `hkchengrex/MMAudio` à partir de la ligne `AUDIO:` du prompt. `HF_AUDIO=0` désactive le son.
+* **Prompts optimisés :** l'agent écrit en anglais un prompt structuré `VIDEO:` (sujet, action, décor, caméra, lumière, style) et `AUDIO:` (bruitages et ambiance). Vous pouvez les modifier avant de générer.
 * **Interface Utilisateur (GUI) :** Interface claire et conviviale construite avec `tkinter` et `ttk`.
 
 ## ⚙️ Prérequis
@@ -20,23 +24,19 @@ L'application facilite la création de clips vidéo personnalisés en combinant 
 Pour exécuter ce projet, vous devez disposer des éléments suivants :
 
 1.  **Python 3.8+**
-2.  **Une Clé API Google/Gemini** (Nécessaire pour accéder à Gemini et aux services Veo 3.0).
+2.  **Une clé API Groq** (gratuite, script/prompt) : https://console.groq.com/keys
+3.  **Un token Hugging Face** (gratuit, génération vidéo) : https://huggingface.co/settings/tokens
 
-### Configuration de la Clé API
+### Configuration des clés API
 
-La clé doit être définie comme une variable d'environnement nommée `GOOGLE_API_KEY` ou `GEMINI_API_KEY`.
+Copiez `.env.example` en `.env` puis renseignez vos clés :
 
-**Exemple (Linux/macOS) :**
-
-```bash
-export GEMINI_API_KEY="VOTRE_CLÉ_API_ICI"
+```env
+GROQ_API_KEY=votre_cle_groq
+HF_TOKEN=votre_token_huggingface
 ```
 
-**Exemple (Windows - Command Prompt) :**
-
-```bash
-set GEMINI_API_KEY="VOTRE_CLÉ_API_ICI"
-```
+Le fichier `.env` est chargé automatiquement au démarrage et ignoré par Git.
 
 ## 🛠️ Installation
 
@@ -62,7 +62,6 @@ venv\Scripts\activate.bat
 ```bash
 pip install -r requirements.txt
 ```
-Note : La dépendance agno utilisée dans le script est supposée être une librairie interne ou un wrapper pour les appels google-genai. Si vous rencontrez des problèmes, assurez-vous que google-genai et requests sont correctement installés.
 
 ## 🚀 Utilisation de l'Application
 
@@ -89,7 +88,7 @@ Les chemins des fichiers sélectionnés sont affichés sous chaque bouton.
 
 ### 2. Configurer la Vidéo
 
-- Ajustez la **durée** (entre *4 et 8 secondes*).  
+- Ajustez la **durée** (entre *4 et 24 secondes*).  
 - Sélectionnez le **Style Visuel** souhaité.
 
 ---
@@ -106,7 +105,7 @@ Cliquez sur 🧩 **Générer le Prompt** pour obtenir une base textuelle incluan
    > Exemple : « Décrivez le contenu de l’image et créez un scénario de 5 secondes avec cet audio. »
 
 2. Cliquez sur 🚀 **Analyser**.  
-   L’agent **Gemini** analysera les médias et le prompt.
+   L’agent **Groq (gpt-oss)** rédigera le script à partir de votre prompt.
 
 3. Le **résultat de l’analyse** s’affichera dans le panneau de droite.  
    Vous pouvez modifier ce texte pour finaliser votre script de génération vidéo.
@@ -127,3 +126,10 @@ Cliquez sur 🧩 **Générer le Prompt** pour obtenir une base textuelle incluan
 ### 6. Sauvegarder
 
 Une fois la génération terminée, une boîte de dialogue s’ouvrira pour **enregistrer le fichier `.mp4`**.
+
+
+---
+
+### 🔊 Remarque sur le son
+
+Le lecteur intégré affiche l'image sans le son : ouvrez le MP4 enregistré (bouton Sauvegarder) dans un lecteur classique pour entendre l'audio. La génération du son consomme aussi du quota GPU Hugging Face (ZeroGPU).

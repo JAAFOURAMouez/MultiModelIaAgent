@@ -160,7 +160,7 @@ class MultimodalAgentView:
     
     def _create_duration_control(self, parent):
         """Crée le contrôle de durée"""
-        duration_frame = tk.LabelFrame(parent, text="⏱️ Durée de la vidéo (4-8 secondes)", 
+        duration_frame = tk.LabelFrame(parent, text="⏱️ Durée de la vidéo (4-24 secondes)", 
                                        bg='#2d2d2d', fg='#ffffff', 
                                        font=('Segoe UI', 10, 'bold'))
         duration_frame.pack(fill='x', padx=10, pady=10)
@@ -351,7 +351,7 @@ class MultimodalAgentView:
         return filedialog.asksaveasfilename(
             defaultextension=".mp4",
             filetypes=[("Vidéo MP4", "*.mp4"), ("Tous les fichiers", "*.*")],
-            initialfile=f"video_veo_{int(time.time())}.mp4"
+            initialfile=f"video_ltx_{int(time.time())}.mp4"
         )
     
     def show_error(self, title: str, message: str):

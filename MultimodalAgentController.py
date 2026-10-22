@@ -315,23 +315,44 @@ class MultimodalAgentController:
     def change_duration(self, delta: int):
         """Change la durée de la vidéo"""
         new_value = self.view.duration_var.get() + delta
-        if 4 <= new_value <= 8:
+        if 4 <= new_value <= self.model.MAX_TOTAL_DURATION:
             self.view.duration_var.set(new_value)
             self.model.config.duration = new_value
     
     def generate_prompt(self):
-        """Génère un prompt automatiquement"""
+        """Génère le prompt : rempli automatiquement par l'IA si des médias sont chargés, sinon gabarit à compléter"""
         # Synchroniser la config avec la vue
         self.model.config.duration = self.view.duration_var.get()
         self.model.config.style = self.view.style_var.get()
         self.model.config.analysis_options = {
             name: var.get() for name, var in self.view.analysis_vars.items()
         }
-        
-        prompt = self.model.generate_prompt()
-        self.view.set_prompt(prompt)
-        self.view.update_status("✅ Prompt généré et prêt à être ajusté.")
-    
+
+        if not self.model.has_media_files():
+            self.view.set_prompt(self.model.generate_prompt())
+            self.view.update_status("✅ Gabarit généré : complétez-le (ou chargez un média pour le remplissage automatique).")
+            return
+
+        self.view.generate_prompt_btn.config(state='disabled')
+        self.view.start_progress()
+        thread = threading.Thread(target=self._run_prompt_from_media)
+        thread.daemon = True
+        thread.start()
+
+    def _run_prompt_from_media(self):
+        """Analyse les médias (vision + audio) dans un thread et remplit le prompt"""
+        try:
+            prompt = self.model.generate_prompt_from_media(callback=self.view.update_status)
+            self.view.set_prompt(prompt)
+            self.view.update_status("✅ Champs remplis à partir de vos médias : relisez et ajustez avant d'analyser.")
+        except Exception as e:
+            self.view.set_prompt(self.model.generate_prompt())
+            self.view.update_status(f"⚠️ Remplissage automatique impossible : {str(e)[:150]}")
+            self.view.show_warning("Remplissage automatique", f"Impossible d'analyser les médias :\n{e}\n\nUn gabarit a été inséré à la place.")
+        finally:
+            self.view.stop_progress()
+            self.view.generate_prompt_btn.config(state='normal')
+
     def analyze(self):
         """Lance l'analyse des médias"""
         query = self.view.get_prompt()
@@ -394,7 +415,7 @@ class MultimodalAgentController:
         
         self.view.enable_analyze_button(False)
         self.view.start_progress()
-        self.view.update_result(f"\n🎥 Lancement de la génération Veo...\n", append=True)
+        self.view.update_result(f"\n🎥 Lancement de la génération Hugging Face (LTX-Video)...\n", append=True)
         self.view.result_text.config(state='disabled')
         
         thread = threading.Thread(target=self._run_video_generation, args=(final_prompt,))

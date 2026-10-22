@@ -1,25 +1,13 @@
-import google.genai as genai
+import os
+from pathlib import Path
 
-# Initialise le client avec ta clé API (si elle n’est pas déjà dans tes variables d’environnement)
-client = genai.Client()
+from dotenv import load_dotenv
+from groq import Groq
 
-print("\n--- Liste des modèles accessibles ---")
+load_dotenv(Path(__file__).resolve().parent / ".env")
 
-try:
-    # Liste tous les modèles disponibles pour ton compte
-    models = client.models.list()
+client = Groq()  # lit GROQ_API_KEY
 
-    for model in models:
-        print(f"- {model.name}")
-
-    print("\n--- Vérification de modèles spécifiques ---")
-
-    # Exemple : vérifier l'accès à Veo
-    try:
-        veo_model = client.models.get("veo-3.1-generate-preview")
-        print(f"✅ Accès à {veo_model.name}")
-    except Exception as e:
-        print(f"❌ Veo inaccessible : {e}")
-
-except Exception as e:
-    print(f"Erreur lors de la récupération de la liste des modèles : {e}")
+print("\n--- Modèles accessibles sur Groq ---")
+for model in client.models.list().data:
+    print(f"- {model.id}")
